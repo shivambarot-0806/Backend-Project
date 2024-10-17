@@ -6,13 +6,19 @@ const app = express()
 
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
-    Credential: true
+    credentials: true
 }))
 
 app.use(express.json({limit: "16kb"}))
 app.use(express.urlencoded({extended: true, limit: "16kb"}))
 app.use(express.static("public"))
 app.use(cookieParser())
+
+app.use((req, res, next) => {
+    console.log(`${req.method} request to ${req.url}`);
+    next();
+});
+
 
 // router import(this is a standardized method of importing router)
 import userRouter from "./routes/user.routes.js";
