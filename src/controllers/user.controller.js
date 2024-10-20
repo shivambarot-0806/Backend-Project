@@ -24,8 +24,8 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     // check for user already exists
-    const existedUser = User.findOne(
-        $or: [{ username }, { email }]
+    const existedUser = await User.findOne(
+        {$or: [{ username }, { email }]}
     )
     if (existedUser) {
         throw new ApiError(409, "User already exists with same email or username")
@@ -33,12 +33,21 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     // check for images, avatar
-    const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    // const avatarLocalPath = req.files?.avatar[0]?.path;
+    let avatarLocalPath;
+    if (req.files && Array.isArray(req.files.avatar) && req.files.avatar.length > 0) {
+        avatarLocalPath = req.files.avatar[0].path;
+    }
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    let coverImageLocalPath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path;
+    }
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar file is required");
     }
-
+    console.log(req.files);
+    
 
     // upload images to cloudinary
     const avatar = await uploadOnCloudinary(avatarLocalPath);
@@ -49,7 +58,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     // create an object of user in db
-    const user = User.create({
+    const user = await User.create({
         fullname,
         username,
         email,
@@ -60,9 +69,8 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     // remove password and token from response
-    const createdUser = await User.findById(user._id).select("-password -refreshToken");
+    const createdUser = await User.findById(user._id).select("-password -refreshToken")
     
-
     // check for user creation
     if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering User");
