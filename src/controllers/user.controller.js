@@ -6,6 +6,7 @@ import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js"; 
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 
 
@@ -401,6 +402,68 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, channel[0], "User channel fetched successfully"));
 });
 
+const getUserWatchHistory = asyncHandler(async (req, res) => {
+    const user = await User.aggregate([
+        {
+            // matching for the particular user
+            $match: {
+                _id: req.user._id
+            }
+        },
+        {
+            // for watch history of the user we looking in the videos model
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",// getting videos model data as array
+                pipeline: [
+                    {
+                        // in videos there is field called owner so 
+                        //for owner details we need to lookup in the user 
+                        //that's why it is used as nested pipeline
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    // we will get all details of owner but we need only some of them
+                                    $project: {
+                                        fullname: 1,
+                                        username: 1,
+                                        avatar: 1
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        $addFields: {
+                            owner: {
+                                // $arrayElemAt: ["$owner", 0] also used instead of $first
+                                $first: "$owner" 
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]);
+
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            user[0].watchHistory,
+            "User watched history fetched successfully"
+        )
+    )
+});
+
 export { 
     registerUser, 
     loginUser, 
@@ -410,5 +473,7 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
+    getUserChannelProfile,
+    getUserWatchHistory
 };
