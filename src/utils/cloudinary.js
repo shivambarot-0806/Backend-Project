@@ -7,12 +7,22 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET 
 });
 
-const uploadOnCloudinary = async (localFilePath) => {
+const uploadOnCloudinary = async (localFilePath, filename, username) => {
     try {
         if (!localFilePath) return null;
+        const folders = await cloudinary.api.root_folders();
+        // console.log(folders);
+        
+        if (!folders?.name === username) {
+            const folder = await cloudinary.api.create_folder(username);
+            // console.log(folder);
+        }
         
         const response = await cloudinary.uploader.upload(localFilePath,{
-            resource_type: "auto"
+            resource_type: "auto",
+            public_id: filename,
+            folder: username
+
         }).catch((error) => {
             console.log(error);
         });
@@ -28,5 +38,16 @@ const uploadOnCloudinary = async (localFilePath) => {
     }
 }
 
+const deleteFromCloudinary = async (filename) => {
+    try {
+        
+        await cloudinary.api.delete_resources([filename], {
+            resource_type: "image"
+        })
+        
+    } catch (error) {
+        console.log(error);
+    }
+}
 
-export { uploadOnCloudinary };
+export { uploadOnCloudinary, deleteFromCloudinary };
